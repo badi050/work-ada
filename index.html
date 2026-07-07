@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>מערכת שעות - כוח אדם</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#12151d;
+    --panel:#1c2130;
+    --panel2:#242a3d;
+    --paper:#f2ecdd;
+    --paper-line: rgba(20,20,10,0.08);
+    --amber:#e8a33d;
+    --amber-dim: rgba(232,163,61,0.18);
+    --teal:#4fa490;
+    --teal-dim: rgba(79,164,144,0.18);
+    --red:#d1495b;
+    --red-dim: rgba(209,73,91,0.18);
+    --text:#ede6d6;
+    --muted:#8b93a6;
+    --border: rgba(237,230,214,0.12);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--text);
+    font-family:'Rubik',sans-serif;
+    min-height:100vh;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  #app{max-width:1000px;margin:0 auto;padding:28px 20px 60px;}
+
+  /* ---------- header ---------- */
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
+  .punch{
+    width:44px;height:44px;border-radius:50%;
+    border:3px solid var(--amber);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--amber);font-size:11px;
+    flex-shrink:0;
+  }
+  .brand h1{font-size:19px;margin:0;letter-spacing:0.2px;}
+  .brand span{color:var(--muted);font-size:13px;}
+
+  /* ---------- cards ---------- */
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:22px;
+    margin-bottom:18px;
+  }
+  .card h2{margin:0 0 16px;font-size:15px;color:var(--amber);letter-spacing:0.3px;font-weight:600;}
+  .card h2 .n{font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-left:8px;}
+
+  /* ---------- role select ---------- */
+  .role-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;}
+  .role-btn{
+    background:var(--panel2);border:1px solid var(--border);border-radius:10px;
+    padding:26px 10px;text-align:center;cursor:pointer;color:var(--text);
+    transition:.15s;font-family:'Rubik',sans-serif;
+  }
+  .role-btn:hover{border-color:var(--amber);background:rgba(232,163,61,0.08);}
+  .role-btn .ic{font-size:28px;display:block;margin-bottom:10px;}
+  .role-btn .lbl{font-weight:600;font-size:14px;}
+  .role-btn .sub{font-size:11px;color:var(--muted);margin-top:4px;}
+
+  @media (max-width:560px){ .role-grid{grid-template-columns:1fr;} }
+
+  /* ---------- forms ---------- */
+  label{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px;}
+  input,select{
+    width:100%;padding:10px 12px;border-radius:7px;border:1px solid var(--border);
+    background:var(--ink);color:var(--text);font-family:'Rubik',sans-serif;font-size:14px;
+  }
+  input.mono,select.mono,input[type=number],input[type=date]{font-family:'IBM Plex Mono',monospace;}
+  input:focus,select:focus{outline:none;border-color:var(--amber);}
+  .row{display:flex;gap:10px;flex-wrap:wrap;}
+  .row > div{flex:1;min-width:130px;}
+
+  button.btn{
+    background:var(--amber);color:#1a1400;border:none;border-radius:7px;
+    padding:11px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:'Rubik',sans-serif;
+    margin-top:14px;transition:.15s;
+  }
+  button.btn:hover{filter:brightness(1.08);}
+  button.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text);font-weight:500;}
+  button.btn.small{padding:6px 12px;font-size:12px;margin-top:0;}
+  button.btn.danger{background:var(--red);color:#fff;}
+  button.btn.teal{background:var(--teal);color:#04231d;}
+  .btnbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .back{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;margin-bottom:14px;font-family:'Rubik',sans-serif;padding:0;}
+  .back:hover{color:var(--amber);}
+
+  .err{color:var(--red);font-size:12px;margin-top:8px;}
+  .hint{color:var(--muted);font-size:12px;margin-top:6px;}
+
+  /* ---------- tables (ledger paper look) ---------- */
+  .ledger{
+    background:var(--paper);color:#1c1a12;border-radius:8px;overflow:hidden;
+    font-family:'IBM Plex Mono',monospace;font-size:13px;
+  }
+  .ledger table{width:100%;border-collapse:collapse;}
+  .ledger th{
+    text-align:right;padding:10px 12px;background:rgba(20,20,10,0.06);
+    font-size:11px;text-transform:uppercase;letter-spacing:0.4px;color:#55503f;font-weight:600;
+    border-bottom:1px solid var(--paper-line);
+  }
+  .ledger td{padding:9px 12px;border-bottom:1px solid var(--paper-line);}
+  .ledger tr:last-child td{border-bottom:none;}
+  .ledger .tot td{font-weight:700;background:rgba(20,20,10,0.05);}
+
+  .stamp{
+    display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;
+    font-family:'Rubik',sans-serif;
+  }
+  .stamp.ok{background:var(--teal-dim);color:var(--teal);}
+  .stamp.bad{background:var(--red-dim);color:var(--red);}
+  .stamp.pending{background:var(--amber-dim);color:var(--amber);}
+
+  .empty{color:var(--muted);font-size:13px;padding:14px 0;text-align:center;}
+
+  .companies-strip{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+  .chip{
+    padding:8px 16px;border-radius:20px;border:1px solid var(--border);cursor:pointer;
+    font-size:13px;color:var(--muted);background:var(--panel2);
+  }
+  .chip.active{border-color:var(--amber);color:var(--amber);background:var(--amber-dim);font-weight:600;}
+
+  .list-item{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;
+  }
+  .list-item:last-child{border-bottom:none;}
+  .list-item .meta{color:var(--muted);font-size:12px;}
+  .tag{font-family:'IBM Plex Mono',monospace;background:var(--panel2);padding:2px 8px;border-radius:5px;font-size:11px;color:var(--amber);}
+
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+    background:var(--teal);color:#04231d;padding:11px 20px;border-radius:8px;font-weight:600;font-size:13px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.35); z-index:50; opacity:0; transition:.25s;
+  }
+  .toast.show{opacity:1;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media (max-width:700px){.grid2{grid-template-columns:1fr;}}
+
+  .loading{color:var(--muted);text-align:center;padding:60px 0;font-size:13px;}
+</style>
+</head>
+<body>
+<div id="app"><div class="loading">טוען...</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========================= STORAGE ========================= */
+const defaultData = () => ({
+  adminPin: '0503133',
+  companies: [],      // {id, name}
+  operators: [],      // {id, companyId, name, pin}
+  workers: [],        // {id, companyId, name, pin, rate}
+  businesses: [],     // {id, companyId, name, pin, rate}
+  entriesWorker: [],  // {id, companyId, workerId, businessId, date, hours, note}
+  entriesBiz: [],     // {id, companyId, businessId, workerId, date, hours, note}
+  threads: [],        // {id, companyId, workerId, businessId, date, status, agreedHours, messages:[{from,text,at}]}
+  assignments: []     // {id, companyId, workerId, businessId} - which businesses a worker may log hours for
+});
+
+let DATA = null;
+
+/* ---- primary data backend: a Google Apps Script Web App backed by a Sheet ----
+   replaces window.storage entirely. The Web App URL is entered once by the admin
+   (see viewApiSetup) and kept in localStorage, since it must exist before any
+   data can be loaded from it. Deploy AppsScript-DataStore.gs.txt to get this URL. */
+const API_URL_KEY = 'sheetsDataApiUrl_v1';
+function getApiUrl(){ return localStorage.getItem(API_URL_KEY) || ''; }
+function setApiUrl(url){ localStorage.setItem(API_URL_KEY, url); }
+
+async function loadData(){
+  try{
+    const res = await fetch(getApiUrl() + '?action=load');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json = await res.json();
+    DATA = (json && json.companies) ? json : defaultData();
+  }catch(e){
+    console.error('שגיאת טעינה מגוגל שיטס', e);
+    DATA = defaultData();
+    showToast('שגיאה בטעינת הנתונים מגוגל שיטס - בדקו את החיבור');
+  }
+  if(!DATA.assignments) DATA.assignments = []; // migrate data saved before assignments existed
+}
+async function saveData(){
+  try{
+    const body = new URLSearchParams();
+    body.set('action', 'save');
+    body.set('payload', JSON.stringify(DATA));
+    const res = await fetch(getApiUrl(), { method:'POST', body });
+    const json = await res.json();
+    if(!json || json.status!=='ok') throw new Error(json && json.message || 'save failed');
+    maybeAutoPush(); // לא ממתינים לזה, רץ ברקע ולא חוסם את המסך - דוח החברה הנפרד (אם הוגדר)
+  }catch(e){
+    console.error('שגיאת שמירה לגוגל שיטס', e);
+    showToast('שגיאה בשמירת הנתונים לגוגל שיטס - בדקו את החיבור');
+  }
+}
+
+function buildReportPayload(companyId, month){
+  const workers = DATA.workers.filter(w=>w.companyId===companyId);
+  const businesses = DATA.businesses.filter(b=>b.companyId===companyId);
+
+  const workerPay = [];
+  workers.forEach(w=>{
+    const byBiz = {};
+    monthlyForWorker(w.id, month).forEach(e=>{ byBiz[e.businessId] = (byBiz[e.businessId]||0) + Number(e.hours); });
+    const entries = Object.entries(byBiz);
+    entries.forEach(([bid,h])=>{
+      workerPay.push([w.name, bizName(bid), h, +(h*w.rate).toFixed(2), false]);
+    });
+    const totalH = entries.reduce((s,[,h])=>s+h,0);
+    workerPay.push([w.name, 'סה״כ', totalH, +(totalH*w.rate).toFixed(2), true]);
+  });
+
+  const bizBill = [];
+  businesses.forEach(b=>{
+    const byWorker = {};
+    monthlyForBiz(b.id, month).forEach(e=>{ byWorker[e.workerId] = (byWorker[e.workerId]||0) + Number(e.hours); });
+    const entries = Object.entries(byWorker);
+    entries.forEach(([wid,h])=>{
+      bizBill.push([b.name, workerName(wid), h, +(h*b.rate).toFixed(2), false]);
+    });
+    const totalH = entries.reduce((s,[,h])=>s+h,0);
+    bizBill.push([b.name, 'סה״כ', totalH, +(totalH*b.rate).toFixed(2), true]);
+  });
+
+  return {
+    month, company: companyName(companyId),
+    workerPay, bizBill,
+    reconciliation: reconcile(companyId, month).map(r=>{
+      const t = findThread(r.workerId,r.businessId,r.date);
+      const st = rowStatus(r, t);
+      return [r.date, workerName(r.workerId), bizName(r.businessId), r.wHours, r.bHours, st.label, t&&t.status==='agreed'?t.agreedHours:''];
+    })
+  };
+}
+
+async function pushReportToSheets(company, month){
+  const payload = buildReportPayload(company.id, month);
+  // שולחים כטופס נסתר (לא fetch) - זה עוקף בעיה ידועה שבה ה-redirect של גוגל
+  // "מאבד" את גוף הבקשה כשמשתמשים ב-fetch עם mode:no-cors
+  let frame = document.getElementById('sheetsSyncFrame');
+  if(!frame){
+    frame = document.createElement('iframe');
+    frame.id = 'sheetsSyncFrame';
+    frame.name = 'sheetsSyncFrame';
+    frame.style.display = 'none';
+    document.body.appendChild(frame);
+  }
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = company.sheetsWebhookUrl;
+  form.target = 'sheetsSyncFrame';
+  const actionInput = document.createElement('input');
+  actionInput.type = 'hidden';
+  actionInput.name = 'action';
+  actionInput.value = 'pushReport';
+  form.appendChild(actionInput);
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = 'payload';
+  input.value = JSON.stringify(payload);
+  form.appendChild(input);
+  document.body.appendChild(form);
+  form.submit();
+  setTimeout(()=>form.remove(), 1000);
+}
+
+async function maybeAutoPush(){
+  try{
+    if(!session.companyId) return;
+    const company = DATA.companies.find(c=>c.id===session.companyId);
+    if(!company || !company.sheetsWebhookUrl) return;
+    const month = session.month || thisMonth();
+    await pushReportToSheets(company, month);
+  }catch(e){
+    console.warn('סנכרון אוטומטי לשיטס נכשל (יישאר מקומי עד ללחיצה על שליחה ידנית)', e);
+  }
+}
+function uid(){ return Math.random().toString(36).slice(2,9); }
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ========================= SESSION / ROUTER ========================= */
+let session = { view:'login' }; // view: login, roleWorker, roleBiz, roleAdmin, workerHome, bizHome, adminHome
+
+function goto(view, extra={}){
+  session = {...session, view, ...extra};
+  render();
+}
+
+/* ========================= HELPERS ========================= */
+function monthKey(dateStr){ return dateStr ? dateStr.slice(0,7) : ''; }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function thisMonth(){ return new Date().toISOString().slice(0,7); }
+function fmt(n){ return (Math.round(n*100)/100).toLocaleString('he-IL'); }
+function companyName(id){ const c = DATA.companies.find(c=>c.id===id); return c?c.name:'—'; }
+function workerName(id){ const w = DATA.workers.find(w=>w.id===id); return w?w.name:'—'; }
+function bizName(id){ const b = DATA.businesses.find(b=>b.id===id); return b?b.name:'—'; }
+
+function monthlyForWorker(workerId, month){
+  return DATA.entriesWorker.filter(e=>e.workerId===workerId && monthKey(e.date)===month);
+}
+function monthlyForBiz(bizId, month){
+  return DATA.entriesBiz.filter(e=>e.businessId===bizId && monthKey(e.date)===month);
+}
+
+// build reconciliation rows for a company & month
+function reconcile(companyId, month){
+  const wEntries = DATA.entriesWorker.filter(e=>e.companyId===companyId && monthKey(e.date)===month);
+  const bEntries = DATA.entriesBiz.filter(e=>e.companyId===companyId && monthKey(e.date)===month);
+  const map = {}; // key workerId|businessId|date
+  wEntries.forEach(e=>{
+    const k = e.workerId+'|'+e.businessId+'|'+e.date;
+    map[k] = map[k] || {workerId:e.workerId, businessId:e.businessId, date:e.date, wHours:0, bHours:null};
+    map[k].wHours += Number(e.hours);
+  });
+  bEntries.forEach(e=>{
+    const k = e.workerId+'|'+e.businessId+'|'+e.date;
+    map[k] = map[k] || {workerId:e.workerId, businessId:e.businessId, date:e.date, wHours:null, bHours:0};
+    if(map[k].bHours===null) map[k].bHours = 0;
+    map[k].bHours += Number(e.hours);
+  });
+  return Object.values(map).sort((a,b)=>a.date<b.date?1:-1);
+}
+
+/* ---- worker <-> business assignments ---- */
+function assignedBusinessIdsForWorker(workerId){
+  return DATA.assignments.filter(a=>a.workerId===workerId).map(a=>a.businessId);
+}
+function assignedWorkerIdsForBusiness(businessId){
+  return DATA.assignments.filter(a=>a.businessId===businessId).map(a=>a.workerId);
+}
+function isAssigned(workerId,businessId){
+  return DATA.assignments.some(a=>a.workerId===workerId && a.businessId===businessId);
+}
+function toggleAssignment(workerId,businessId,companyId){
+  const idx = DATA.assignments.findIndex(a=>a.workerId===workerId && a.businessId===businessId);
+  if(idx>=0) DATA.assignments.splice(idx,1);
+  else DATA.assignments.push({id:uid(), companyId, workerId, businessId});
+}
+
+/* ---- negotiation / agreement threads ---- */
+function findThread(workerId,businessId,date){
+  return DATA.threads.find(t=>t.workerId===workerId && t.businessId===businessId && t.date===date);
+}
+function ensureThread(workerId,businessId,date,companyId){
+  let t = findThread(workerId,businessId,date);
+  if(!t){ t = {id:uid(), companyId, workerId, businessId, date, status:'open', agreedHours:null, messages:[]}; DATA.threads.push(t); }
+  return t;
+}
+function rowStatus(r, thread){
+  if(thread && thread.status==='agreed') return {label:'מוסכם', cls:'ok'};
+  if(r.wHours!==null && r.bHours!==null && Math.abs(r.wHours-r.bHours)<0.01) return {label:'תואם', cls:'ok'};
+  if(r.wHours===null || r.bHours===null) return {label:'דיווח חסר', cls:'pending'};
+  if(thread && thread.messages && thread.messages.length) return {label:'בדיון', cls:'pending'};
+  return {label:'ממתין לאישור', cls:'bad'};
+}
+function safeId(workerId,businessId,date){ return (workerId+'_'+businessId+'_'+date).replace(/[^a-zA-Z0-9_]/g,'_'); }
+
+// renders one interactive negotiation box for a mismatch/pending row
+function negotiationBox(r, perspective){
+  const thread = findThread(r.workerId,r.businessId,r.date);
+  const sid = safeId(r.workerId,r.businessId,r.date);
+  const status = rowStatus(r, thread);
+  const msgs = thread ? thread.messages : [];
+  const msgHtml = msgs.length ? msgs.map(m=>`<div style="margin:4px 0;font-size:12px;"><b style="color:${m.from==='worker'?'var(--teal)':'var(--amber)'}">${m.from==='worker'?'עובד':'עסק'}:</b> ${esc(m.text)}</div>`).join('')
+    : `<div class="empty" style="padding:4px 0;font-size:12px;">אין עדיין הודעות</div>`;
+  const otherHours = perspective==='worker' ? r.bHours : r.wHours;
+  const prefill = (otherHours!==null && otherHours!==undefined) ? otherHours : '';
+  const isAgreed = status.label==='מוסכם';
+  const otherName = perspective==='worker' ? esc(bizName(r.businessId)) : esc(workerName(r.workerId));
+  return `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:10px;">
+    <div class="btnbar" style="justify-content:space-between;">
+      <span style="font-size:13px;">${r.date} · ${otherName}</span>
+      <span class="stamp ${status.cls}">${status.label}${isAgreed?` · ${fmt(thread.agreedHours)} ש'`:''}</span>
+    </div>
+    <div class="hint">העובד דיווח: ${r.wHours!==null?fmt(r.wHours):'—'} ש׳ &nbsp; · &nbsp; העסק דיווח: ${r.bHours!==null?fmt(r.bHours):'—'} ש׳</div>
+    <div style="margin:8px 0;">${msgHtml}</div>
+    ${isAgreed ? `<button class="btn ghost small" data-act="reopenThread" data-worker="${r.workerId}" data-biz="${r.businessId}" data-date="${r.date}">פתיחת דיון מחדש</button>` : `
+    <div class="row">
+      <div style="flex:2;"><input type="text" id="msg_${sid}" placeholder="הוספת הערה..."></div>
+      <div style="flex:0 0 90px;"><input type="number" step="0.25" class="mono" id="agree_${sid}" value="${prefill}" placeholder="שעות"></div>
+    </div>
+    <div class="btnbar" style="margin-top:8px;">
+      <button class="btn small ghost" data-act="sendThreadMsg" data-worker="${r.workerId}" data-biz="${r.businessId}" data-date="${r.date}" data-side="${perspective}">שליחת הערה</button>
+      <button class="btn small teal" data-act="finalizeThread" data-worker="${r.workerId}" data-biz="${r.businessId}" data-date="${r.date}" data-side="${perspective}">סגירה בהסכמה על השעות שבשדה</button>
+    </div>`}
+  </div>`;
+}
+
+/* ========================= RENDER ROOT ========================= */
+function render(){
+  const app = document.getElementById('app');
+  if(!getApiUrl() || session.forceApiSetup){
+    app.innerHTML = header() + viewApiSetup();
+    attachEvents();
+    return;
+  }
+  app.innerHTML = header() + body();
+  attachEvents();
+}
+
+function viewApiSetup(){
+  const hasExisting = !!getApiUrl();
+  return `<div class="card" style="max-width:460px;">
+    <h2>חיבור למסד הנתונים (גוגל שיטס)</h2>
+    <div class="hint">האפליקציה שומרת וטוענת את כל הנתונים שלה מסקריפט Google Apps Script המחובר לגיליון גוגל שיטס. יש לפרוס את הסקריפט (AppsScript-DataStore.gs.txt) ולהדביק כאן את כתובת ה-Web App שהוא מייצר.</div>
+    <label>כתובת ה-Web App</label>
+    <input type="text" id="apiUrlInput" class="mono" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(getApiUrl())}">
+    <div id="apiUrlErr" class="err"></div>
+    <div class="btnbar">
+      <button class="btn" data-act="saveApiUrl">שמירה והמשך</button>
+      ${hasExisting ? `<button class="btn ghost" data-act="cancelApiSetup">ביטול</button>` : ``}
+    </div>
+  </div>`;
+}
+
+function header(){
+  return `<div class="brand"><div class="punch">שע</div>
+    <div><h1>מערכת שעות — כוח אדם</h1>
+    <span>${session.view==='login' ? 'בחרו כניסה כדי להתחיל' : sessionLabel()}</span></div></div>`;
+}
+function sessionLabel(){
+  if(session.role==='admin') return 'מנהל · ' + (session.companyId ? companyName(session.companyId) : 'כל החברות');
+  if(session.role==='operator'){
+    const op = DATA.operators.find(o=>o.id===session.operatorId);
+    return 'מתפעל · ' + (op?op.name:'') + ' · ' + companyName(session.companyId);
+  }
+  if(session.role==='worker') return 'עובד · ' + workerName(session.workerId) + ' · ' + companyName(session.companyId);
+  if(session.role==='biz') return 'עסק · ' + bizName(session.bizId) + ' · ' + companyName(session.companyId);
+  return '';
+}
+
+function body(){
+  switch(session.view){
+    case 'login': return viewLogin();
+    case 'workerLogin': return viewIdLogin('worker');
+    case 'bizLogin': return viewIdLogin('biz');
+    case 'operatorLogin': return viewOperatorLogin();
+    case 'pinAdmin': return viewPin('admin');
+    case 'workerHome': return viewWorkerHome();
+    case 'bizHome': return viewBizHome();
+    case 'adminHome': return viewAdminHome();
+    default: return viewLogin();
+  }
+}
+
+/* ========================= LOGIN FLOWS ========================= */
+function viewLogin(){
+  return `<div class="card">
+    <h2>מי נכנס/ת?</h2>
+    <div class="role-grid">
+      <div class="role-btn" data-act="go" data-view="pinAdmin"><span class="ic">🗝️</span><span class="lbl">מנהל</span></div>
+      <div class="role-btn" data-act="go" data-view="operatorLogin"><span class="ic">🧑‍💼</span><span class="lbl">מתפעל</span></div>
+      <div class="role-btn" data-act="go" data-view="workerLogin"><span class="ic">🕘</span><span class="lbl">עובד</span></div>
+      <div class="role-btn" data-act="go" data-view="bizLogin"><span class="ic">🏢</span><span class="lbl">עסק</span></div>
+    </div>
+  </div>
+  <div style="text-align:center;">
+    <button class="back" data-act="openApiSetup">⚙ הגדרות חיבור נתונים</button>
+  </div>`;
+}
+
+function viewIdLogin(role){
+  const isWorker = role==='worker';
+  return `<button class="back" data-act="go" data-view="login">→ חזרה</button>
+  <div class="card" style="max-width:340px;">
+    <h2>${isWorker ? 'כניסת עובד' : 'כניסת עסק'}</h2>
+    <label>${isWorker ? 'תעודת זהות / טלפון' : 'מספר ח.פ'}</label>
+    <input class="mono" type="text" id="idInput" placeholder="${isWorker ? 'לדוגמה: 123456789' : 'לדוגמה: 514123456'}" autofocus>
+    <label>קוד אישי (PIN)</label>
+    <input class="mono" type="password" id="pinInput" placeholder="••••">
+    <div id="pinErr" class="err"></div>
+    <button class="btn" data-act="submitIdLogin" data-role="${role}">כניסה</button>
+  </div>`;
+}
+
+function viewOperatorLogin(){
+  return `<button class="back" data-act="go" data-view="login">→ חזרה</button>
+  <div class="card" style="max-width:340px;">
+    <h2>כניסת מתפעל</h2>
+    <label>שם מלא</label>
+    <input class="mono" type="text" id="idInput" placeholder="שם שקיבלת מהמנהל" autofocus>
+    <label>קוד אישי</label>
+    <input class="mono" type="password" id="pinInput" placeholder="••••">
+    <div id="pinErr" class="err"></div>
+    <button class="btn" data-act="submitOperatorLogin">כניסה</button>
+  </div>`;
+}
+
+function viewPin(role){
+  return `<button class="back" data-act="go" data-view="login">→ חזרה</button>
+  <div class="card" style="max-width:320px;">
+    <h2>הזנת קוד אישי</h2>
+    <label>קוד (PIN)</label>
+    <input class="mono" type="password" id="pinInput" placeholder="••••" autofocus>
+    <div id="pinErr" class="err"></div>
+    <button class="btn" data-act="submitPin" data-role="${role}">כניסה</button>
+  </div>`;
+}
+
+/* ========================= WORKER HOME ========================= */
+function viewWorkerHome(){
+  const w = DATA.workers.find(w=>w.id===session.workerId);
+  const assignedBizIds = assignedBusinessIdsForWorker(w.id);
+  const bizList = DATA.businesses.filter(b=>assignedBizIds.includes(b.id));
+  const month = session.month || thisMonth();
+  const entries = monthlyForWorker(w.id, month).sort((a,b)=>a.date<b.date?1:-1);
+  const totalHours = entries.reduce((s,e)=>s+Number(e.hours),0);
+  const totalPay = totalHours * w.rate;
+
+  const rows = entries.length ? entries.map(e=>`
+    <tr><td>${e.date}</td><td>${esc(bizName(e.businessId))}</td><td>${fmt(e.hours)}</td>
+    <td><button class="btn small danger" data-act="delEntryW" data-id="${e.id}">מחיקה</button></td></tr>`).join('')
+    : `<tr><td colspan="4" class="empty">אין דיווחי שעות החודש</td></tr>`;
+
+  const attention = reconcile(session.companyId, month)
+    .filter(r=>r.workerId===w.id)
+    .filter(r=> rowStatus(r, findThread(r.workerId,r.businessId,r.date)).label !== 'תואם');
+
+  return `${logoutBar()}
+  <div class="card">
+    <h2>עדכונים מהעסקים <span class="n">${attention.length}</span></h2>
+    <div class="hint">כאן רואים כל מקרה שהעסק דיווח שעות שלא תואמות למה שדיווחת (או שדיווח משהו שעדיין לא דיווחת). אפשר לאשר, להגיב, או לסגור בהסכמה על מספר סופי.</div>
+    ${attention.length ? attention.map(r=>negotiationBox(r,'worker')).join('') : `<div class="empty">אין כרגע עדכונים שממתינים לך</div>`}
+  </div>
+
+  <div class="card">
+    <h2>דיווח שעות חדש</h2>
+    ${bizList.length ? `
+    <div class="row">
+      <div><label>עסק</label><select id="fBiz" class="mono">${bizList.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select></div>
+      <div><label>תאריך</label><input type="date" id="fDate" value="${todayStr()}"></div>
+      <div><label>שעות</label><input type="number" step="0.25" min="0" id="fHours" placeholder="8.5"></div>
+    </div>
+    <label>הערה (אופציונלי)</label>
+    <input type="text" id="fNote" placeholder="למשל: משמרת בוקר">
+    <button class="btn" data-act="addEntryW">שמירת דיווח</button>
+    ` : `<div class="empty">עדיין לא שויכת לאף עסק. פנה/י למנהל כדי לשייך אותך לעסק לפני שתוכל/י לדווח שעות.</div>`}
+  </div>
+
+  <div class="card">
+    <h2>הדיווחים שלי <span class="n">${monthPicker(month)}</span></h2>
+    <div class="ledger">
+      <table><thead><tr><th>תאריך</th><th>עסק</th><th>שעות</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr class="tot"><td>סה"כ</td><td></td><td>${fmt(totalHours)}</td><td></td></tr></tfoot>
+      </table>
+    </div>
+    <div class="hint">שכר משוער לחודש (לפי תעריף ${fmt(w.rate)} ₪/שעה): <b class="mono" style="color:var(--amber)">${fmt(totalPay)} ₪</b></div>
+  </div>`;
+}
+
+/* ========================= BUSINESS HOME ========================= */
+function viewBizHome(){
+  const b = DATA.businesses.find(b=>b.id===session.bizId);
+  const assignedWorkerIds = assignedWorkerIdsForBusiness(b.id);
+  const workerList = DATA.workers.filter(w=>assignedWorkerIds.includes(w.id));
+  const month = session.month || thisMonth();
+  const entries = monthlyForBiz(b.id, month).sort((a,b)=>a.date<b.date?1:-1);
+  const totalHours = entries.reduce((s,e)=>s+Number(e.hours),0);
+  const totalBill = totalHours * b.rate;
+
+  const rows = entries.length ? entries.map(e=>`
+    <tr><td>${e.date}</td><td>${esc(workerName(e.workerId))}</td><td>${fmt(e.hours)}</td>
+    <td><button class="btn small danger" data-act="delEntryB" data-id="${e.id}">מחיקה</button></td></tr>`).join('')
+    : `<tr><td colspan="4" class="empty">אין דיווחי שעות החודש</td></tr>`;
+
+  // mismatches relevant to this business
+  const recon = reconcile(session.companyId, month).filter(r=>r.businessId===b.id);
+  const attention = recon.filter(r=> rowStatus(r, findThread(r.workerId,r.businessId,r.date)).label !== 'תואם');
+
+  return `${logoutBar()}
+  <div class="card">
+    <h2>דיווח שעות עובד</h2>
+    ${workerList.length ? `
+    <div class="row">
+      <div><label>עובד</label><select id="fWorker" class="mono">${workerList.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('')}</select></div>
+      <div><label>תאריך</label><input type="date" id="fDate" value="${todayStr()}"></div>
+      <div><label>שעות</label><input type="number" step="0.25" min="0" id="fHours" placeholder="8.5"></div>
+    </div>
+    <label>הערה (אופציונלי)</label>
+    <input type="text" id="fNote" placeholder="למשל: אתר תל אביב">
+    <button class="btn" data-act="addEntryB">שמירת דיווח</button>
+    ` : `<div class="empty">עדיין לא שויכו לכם עובדים. פנו למנהל כדי לשייך עובדים לפני דיווח שעות.</div>`}
+  </div>
+
+  ${workerList.length ? `
+  <div class="card">
+    <h2>מילוי שעות לכל החודש בבת אחת</h2>
+    <div class="hint">מתאים אם לא נכנסים כל יום — בוחרים עובד וחודש, ואז ממלאים את כל הימים בטבלה אחת ושומרים הכל בלחיצה אחת.</div>
+    <div class="row">
+      <div><label>עובד</label><select id="bulkWorker" class="mono">${workerList.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('')}</select></div>
+      <div><label>חודש</label><input type="month" id="bulkMonth" value="${month}"></div>
+    </div>
+    <button class="btn ghost" onclick="genBulkRows()">הצגת טבלת ימים למילוי</button>
+    <div id="bulkContainer"></div>
+  </div>` : ``}
+
+  <div class="card">
+    <h2>הדיווחים שלנו <span class="n">${monthPicker(month)}</span></h2>
+    <div class="ledger">
+      <table><thead><tr><th>תאריך</th><th>עובד</th><th>שעות</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr class="tot"><td>סה"כ</td><td></td><td>${fmt(totalHours)}</td><td></td></tr></tfoot>
+      </table>
+    </div>
+    <div class="hint">חיוב משוער לחודש (לפי תעריף ${fmt(b.rate)} ₪/שעה): <b class="mono" style="color:var(--amber)">${fmt(totalBill)} ₪</b></div>
+  </div>
+
+  <div class="card">
+    <h2>עדכונים והתאמות מול העובדים <span class="n">${attention.length}</span></h2>
+    <div class="hint">כל מקרה שבו השעות שדיווחתם לא תואמות למה שהעובד דיווח מופיע כאן. אפשר להגיב, לראות מה העובד כתב, ולסגור בהסכמה על מספר סופי.</div>
+    ${attention.length ? attention.map(r=>negotiationBox(r,'biz')).join('') : `<div class="empty">הכל תואם — אין דיונים פתוחים</div>`}
+  </div>`;
+}
+
+/* ========================= ADMIN HOME ========================= */
+function viewAdminHome(){
+  if(session.role==='admin' && !session.companyId){
+    return `${logoutBar()}
+    <div class="card">
+      <h2>הוספת חברת כוח אדם</h2>
+      <label>שם החברה</label>
+      <input type="text" id="newCompanyName" placeholder="למשל: כוח אדם צפון בע״מ">
+      <button class="btn" data-act="addCompany">הוספה</button>
+    </div>
+    <div class="card">
+      <h2>החברות שלכם <span class="n">${DATA.companies.length}</span></h2>
+      ${DATA.companies.length? DATA.companies.map(c=>`
+        <div class="list-item">
+          <span>${esc(c.name)} <span class="tag">${DATA.operators.filter(o=>o.companyId===c.id).length} מתפעלים</span></span>
+          <span class="btnbar">
+            <button class="btn small ghost" data-act="selCompany" data-id="${c.id}">כניסה לחברה</button>
+            <button class="btn small danger" data-act="delCompany" data-id="${c.id}">מחיקה</button>
+          </span>
+        </div>`).join('') : `<div class="empty">עדיין לא נוספה אף חברה</div>`}
+    </div>`;
+  }
+
+  const month = session.month || thisMonth();
+  const company = DATA.companies.find(c=>c.id===session.companyId) || {};
+  const workers = DATA.workers.filter(w=>w.companyId===session.companyId);
+  const businesses = DATA.businesses.filter(b=>b.companyId===session.companyId);
+
+  const workerPayRows = workers.map(w=>{
+    const h = monthlyForWorker(w.id, month).reduce((s,e)=>s+Number(e.hours),0);
+    return `<tr><td>${esc(w.name)}</td><td>${fmt(w.rate)}</td><td>${fmt(h)}</td><td>${fmt(h*w.rate)}</td></tr>`;
+  }).join('') || `<tr><td colspan="4" class="empty">אין עובדים</td></tr>`;
+  const workerTotal = workers.reduce((s,w)=>s+monthlyForWorker(w.id,month).reduce((s2,e)=>s2+Number(e.hours),0)*w.rate,0);
+
+  const bizBillRows = businesses.map(b=>{
+    const h = monthlyForBiz(b.id, month).reduce((s,e)=>s+Number(e.hours),0);
+    return `<tr><td>${esc(b.name)}</td><td>${fmt(b.rate)}</td><td>${fmt(h)}</td><td>${fmt(h*b.rate)}</td></tr>`;
+  }).join('') || `<tr><td colspan="4" class="empty">אין עסקים</td></tr>`;
+  const bizTotal = businesses.reduce((s,b)=>s+monthlyForBiz(b.id,month).reduce((s2,e)=>s2+Number(e.hours),0)*b.rate,0);
+
+  const recon = reconcile(session.companyId, month);
+  const mismatchCount = recon.filter(r=>{
+    const st = rowStatus(r, findThread(r.workerId,r.businessId,r.date)).label;
+    return st!=='תואם' && st!=='מוסכם';
+  }).length;
+  const reconRows = recon.map(r=>{
+    const st = rowStatus(r, findThread(r.workerId,r.businessId,r.date));
+    return `<tr><td>${r.date}</td><td>${esc(workerName(r.workerId))}</td><td>${esc(bizName(r.businessId))}</td>
+      <td>${r.wHours!==null?fmt(r.wHours):'—'}</td><td>${r.bHours!==null?fmt(r.bHours):'—'}</td><td><span class="stamp ${st.cls}">${st.label}</span></td></tr>`;
+  }).join('') || `<tr><td colspan="6" class="empty">אין נתונים החודש</td></tr>`;
+
+  return `${logoutBar()}
+  ${session.role==='admin' ? companiesStrip() : `<div class="card"><h2>החברה שלך: ${esc(companyName(session.companyId))}</h2></div>`}
+
+  ${session.role==='admin' ? `
+  <div class="card">
+    <h2>מתפעלים בחברה זו <span class="n">${DATA.operators.filter(o=>o.companyId===session.companyId).length}</span></h2>
+    ${DATA.operators.filter(o=>o.companyId===session.companyId).map(o=>`<div class="list-item"><span>${esc(o.name)}</span>
+      <span class="btnbar"><span class="meta mono">קוד: ${esc(o.pin)}</span>
+      <button class="btn small danger" data-act="delOperator" data-id="${o.id}">מחיקה</button></span></div>`).join('') || `<div class="empty">אין מתפעלים עדיין</div>`}
+    <div class="row"><div><label>שם המתפעל</label><input type="text" id="newOperatorName" placeholder="שם מלא"></div>
+    <div><label>קוד אישי</label><input type="text" id="newOperatorPin" class="mono" placeholder="1234"></div></div>
+    <button class="btn" data-act="addOperator">הוספת מתפעל</button>
+    <div class="hint">המתפעל ייכנס למערכת עם השם והקוד האלה, ויוכל לנהל רק את העובדים והעסקים של החברה הזו.</div>
+  </div>
+
+  <div class="card">
+    <h2>חיבור לגוגל שיטס</h2>
+    <label>כתובת ה-Web App (Webhook) של הגיליון</label>
+    <input type="text" id="sheetsUrl" class="mono" placeholder="https://script.google.com/macros/s/..." value="${esc(company.sheetsWebhookUrl||'')}">
+    <button class="btn ghost" data-act="saveWebhook">שמירת חיבור</button>
+    <div class="hint">ההגדרה הזו חד-פעמית לכל חברה. את קוד ה-Apps Script שיש להדביק בגיליון קיבלת בהודעה בצ'אט.</div>
+  </div>` : ``}
+
+  <div class="grid2">
+    <div class="card">
+      <h2>עובדים <span class="n">${workers.length}</span></h2>
+      ${workers.map(w=>workerListItem(w, businesses)).join('') || `<div class="empty">אין עובדים עדיין</div>`}
+      <label>שם העובד</label><input type="text" id="newWorkerName" placeholder="שם מלא">
+      <label>תעודת זהות / טלפון (לזיהוי בכניסה)</label><input type="text" id="newWorkerIdNum" class="mono" placeholder="123456789">
+      <div class="row"><div><label>תעריף (₪/שעה)</label><input type="number" id="newWorkerRate" class="mono" placeholder="45"></div>
+      <div><label>קוד אישי (PIN)</label><input type="text" id="newWorkerPin" class="mono" placeholder="1111"></div></div>
+      <button class="btn" data-act="addWorker">הוספת עובד</button>
+    </div>
+
+    <div class="card">
+      <h2>עסקים <span class="n">${businesses.length}</span></h2>
+      ${businesses.map(b=>bizListItem(b, workers)).join('') || `<div class="empty">אין עסקים עדיין</div>`}
+      <label>שם העסק</label><input type="text" id="newBizName" placeholder="שם העסק">
+      <label>מספר ח.פ (לזיהוי בכניסה)</label><input type="text" id="newBizReg" class="mono" placeholder="514123456">
+      <div class="row"><div><label>תעריף חיוב (₪/שעה)</label><input type="number" id="newBizRate" class="mono" placeholder="60"></div>
+      <div><label>קוד אישי (PIN)</label><input type="text" id="newBizPin" class="mono" placeholder="2222"></div></div>
+      <button class="btn" data-act="addBiz">הוספת עסק</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>דוח חודשי — שכר עובדים <span class="n">${monthPicker(month)}</span></h2>
+    <div class="ledger"><table><thead><tr><th>עובד</th><th>תעריף</th><th>שעות</th><th>לתשלום</th></tr></thead>
+    <tbody>${workerPayRows}</tbody>
+    <tfoot><tr class="tot"><td colspan="3">סה"כ לתשלום לעובדים</td><td>${fmt(workerTotal)} ₪</td></tr></tfoot></table></div>
+  </div>
+
+  <div class="card">
+    <h2>דוח חודשי — חיוב עסקים <span class="n">${monthPicker(month)}</span></h2>
+    <div class="ledger"><table><thead><tr><th>עסק</th><th>תעריף</th><th>שעות</th><th>לחיוב</th></tr></thead>
+    <tbody>${bizBillRows}</tbody>
+    <tfoot><tr class="tot"><td colspan="3">סה"כ לחיוב מעסקים</td><td>${fmt(bizTotal)} ₪</td></tr></tfoot></table></div>
+    <div class="hint">רווח גולמי משוער (חיוב עסקים פחות שכר עובדים): <b class="mono" style="color:var(--teal)">${fmt(bizTotal-workerTotal)} ₪</b></div>
+  </div>
+
+  <div class="card">
+    <h2>בדיקת התאמה עובד ↔ עסק ${mismatchCount>0?`<span class="stamp bad">${mismatchCount} אי-התאמות</span>`:`<span class="stamp ok">הכל תואם</span>`}</h2>
+    <div class="ledger"><table><thead><tr><th>תאריך</th><th>עובד</th><th>עסק</th><th>דיווח עובד</th><th>דיווח עסק</th><th>סטטוס</th></tr></thead>
+    <tbody>${reconRows}</tbody></table></div>
+  </div>
+
+  <div class="card">
+    <h2>גוגל שיטס</h2>
+    <div class="hint">${company.sheetsWebhookUrl
+      ? `החברה הזו מחוברת לשיטס — כל שמירה (דיווח שעות, הסכמה וכו׳) נשלחת אוטומטית לגיליון ברקע, בלי צורך ללחוץ כלום. הכפתור למטה הוא רק לסנכרון ידני מיידי אם רוצים לוודא שהגיליון מעודכן עכשיו.`
+      : `"העתקה ללוח" עובד תמיד בוודאות — מדביקים ידנית בגיליון (Ctrl+V). כדי לקבל סנכרון אוטומטי לגמרי (בלי לחיצות), יש לחבר כתובת Webhook בכרטיס "חיבור לגוגל שיטס" למעלה.`}</div>
+    <div class="btnbar">
+      <button class="btn teal" data-act="copySheets" data-month="${month}">העתקת דוח החודש ללוח</button>
+      ${company.sheetsWebhookUrl ? `<button class="btn ghost" data-act="pushSheets" data-month="${month}">סנכרון ידני מיידי</button>` : ``}
+    </div>
+  </div>`;
+}
+
+function workerListItem(w, businesses){
+  const assignedIds = assignedBusinessIdsForWorker(w.id);
+  const panelOpen = session.assignPanelWorker === w.id;
+  return `<div class="list-item" style="flex-direction:column;align-items:stretch;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span>${esc(w.name)} <span class="tag">${fmt(w.rate)} ₪/ש</span></span>
+      <span class="btnbar"><span class="meta mono">ת.ז: ${esc(w.idNumber||'—')} · קוד: ${w.pin}</span>
+      <button class="btn small ghost" data-act="toggleWorkerAssign" data-id="${w.id}">שיוך עסקים (${assignedIds.length})</button>
+      <button class="btn small danger" data-act="delWorker" data-id="${w.id}">מחיקה</button></span>
+    </div>
+    ${panelOpen ? `<div style="margin-top:10px;padding:12px;background:var(--panel2);border-radius:8px;">
+      <div class="hint" style="margin:0 0 8px;">בחרו אילו עסקים ${esc(w.name)} רשאי/ת לדווח שעות עבורם:</div>
+      ${businesses.length ? businesses.map(b=>`
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0;cursor:pointer;">
+          <input type="checkbox" data-act="assignToggle" data-worker="${w.id}" data-biz="${b.id}" ${assignedIds.includes(b.id)?'checked':''}>
+          ${esc(b.name)}
+        </label>`).join('') : `<div class="empty">אין עסקים בחברה זו עדיין</div>`}
+    </div>` : ``}
+  </div>`;
+}
+
+function bizListItem(b, workers){
+  const assignedIds = assignedWorkerIdsForBusiness(b.id);
+  const panelOpen = session.assignPanelBiz === b.id;
+  return `<div class="list-item" style="flex-direction:column;align-items:stretch;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span>${esc(b.name)} <span class="tag">${fmt(b.rate)} ₪/ש</span></span>
+      <span class="btnbar"><span class="meta mono">ח.פ: ${esc(b.companyReg||'—')} · קוד: ${b.pin}</span>
+      <button class="btn small ghost" data-act="toggleBizAssign" data-id="${b.id}">שיוך עובדים (${assignedIds.length})</button>
+      <button class="btn small danger" data-act="delBiz" data-id="${b.id}">מחיקה</button></span>
+    </div>
+    ${panelOpen ? `<div style="margin-top:10px;padding:12px;background:var(--panel2);border-radius:8px;">
+      <div class="hint" style="margin:0 0 8px;">בחרו אילו עובדים רשאים לדווח שעות עבור ${esc(b.name)}:</div>
+      ${workers.length ? workers.map(w=>`
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0;cursor:pointer;">
+          <input type="checkbox" data-act="assignToggle" data-worker="${w.id}" data-biz="${b.id}" ${assignedIds.includes(w.id)?'checked':''}>
+          ${esc(w.name)}
+        </label>`).join('') : `<div class="empty">אין עובדים בחברה זו עדיין</div>`}
+    </div>` : ``}
+  </div>`;
+}
+
+function companiesStrip(){
+  return `<div class="companies-strip">
+    ${DATA.companies.map(c=>`<div class="chip ${c.id===session.companyId?'active':''}" data-act="selCompany" data-id="${c.id}">${esc(c.name)}</div>`).join('')}
+    <div class="chip" data-act="go" data-view="adminHome" data-clearcompany="1">← כל החברות</div>
+  </div>`;
+}
+
+function monthPicker(month){
+  return `<input type="month" class="mono" style="width:auto;display:inline-block;padding:4px 8px;font-size:12px;" value="${month}" data-act="changeMonth">`;
+}
+
+function logoutBar(){
+  return `<div class="btnbar" style="margin-bottom:16px;justify-content:space-between;">
+    <button class="btn ghost small" data-act="openApiSetup">⚙ חיבור נתונים</button>
+    <button class="btn ghost small" data-act="logout">יציאה</button>
+  </div>`;
+}
+
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function daysInMonthList(month){
+  const [y,m] = month.split('-').map(Number);
+  const count = new Date(y, m, 0).getDate();
+  const arr = [];
+  for(let d=1; d<=count; d++){
+    arr.push(`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+  }
+  return arr;
+}
+function weekdayHe(dateStr){
+  return new Date(dateStr+'T00:00:00').toLocaleDateString('he-IL', {weekday:'short'});
+}
+
+function genBulkRows(){
+  const workerId = document.getElementById('bulkWorker').value;
+  const month = document.getElementById('bulkMonth').value;
+  if(!workerId || !month) return showToast('נא לבחור עובד וחודש');
+  const days = daysInMonthList(month);
+  const rows = days.map(date=>{
+    const existing = DATA.entriesBiz.find(e=>e.businessId===session.bizId && e.workerId===workerId && e.date===date);
+    const val = existing ? existing.hours : '';
+    return `<div class="row" style="align-items:center;margin-top:6px;">
+      <div style="flex:0 0 90px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);">${date.slice(8,10)}/${date.slice(5,7)} · ${weekdayHe(date)}</div>
+      <div style="flex:1;"><input type="number" step="0.25" min="0" class="mono bulkDayInput" data-date="${date}" value="${val}" placeholder="0"></div>
+    </div>`;
+  }).join('');
+  document.getElementById('bulkContainer').innerHTML = `
+    <div style="max-height:340px;overflow-y:auto;margin-top:10px;padding-left:4px;">${rows}</div>
+    <button class="btn" style="margin-top:14px;" onclick="saveBulkRows('${workerId}')">שמירת כל החודש לעובד זה</button>
+  `;
+}
+
+async function saveBulkRows(workerId){
+  const inputs = document.querySelectorAll('.bulkDayInput');
+  inputs.forEach(inp=>{
+    const date = inp.dataset.date;
+    const hours = Number(inp.value);
+    const idx = DATA.entriesBiz.findIndex(e=>e.businessId===session.bizId && e.workerId===workerId && e.date===date);
+    if(hours>0){
+      if(idx>=0) DATA.entriesBiz[idx].hours = hours;
+      else DATA.entriesBiz.push({id:uid(), companyId:session.companyId, businessId:session.bizId, workerId, date, hours, note:''});
+    } else if(idx>=0){
+      DATA.entriesBiz.splice(idx,1);
+    }
+  });
+  await saveData();
+  showToast('כל שעות החודש נשמרו');
+  render();
+}
+
+/* ========================= EVENTS ========================= */
+function attachEvents(){
+  document.querySelectorAll('[data-act]').forEach(el=>{
+    el.addEventListener('click', onAction);
+  });
+  document.querySelectorAll('[data-act="changeMonth"]').forEach(el=>{
+    el.addEventListener('change', e=>{ session.month = e.target.value; render(); });
+  });
+}
+
+async function onAction(e){
+  const el = e.currentTarget;
+  const act = el.dataset.act;
+
+  if(act==='go'){
+    if(el.dataset.clearcompany){ session.companyId = null; }
+    goto(el.dataset.view);
+    return;
+  }
+  if(act==='openApiSetup'){ session.forceApiSetup = true; render(); return; }
+  if(act==='cancelApiSetup'){ session.forceApiSetup = false; render(); return; }
+  if(act==='saveApiUrl'){
+    const url = document.getElementById('apiUrlInput').value.trim();
+    const errEl = document.getElementById('apiUrlErr');
+    if(!url){ errEl.textContent = 'יש להזין כתובת'; return; }
+    setApiUrl(url);
+    session.forceApiSetup = false;
+    showToast('טוען נתונים מגוגל שיטס...');
+    await loadData();
+    render();
+    return;
+  }
+  if(act==='submitOperatorLogin'){
+    const name = document.getElementById('idInput').value.trim();
+    const pin = document.getElementById('pinInput').value.trim();
+    const errEl = document.getElementById('pinErr');
+    if(!name || !pin){ errEl.textContent = 'נא למלא שם וקוד'; return; }
+    const op = DATA.operators.find(o=> o.name.trim()===name && o.pin===pin);
+    if(op){ session.role='operator'; session.operatorId=op.id; session.companyId=op.companyId; goto('adminHome'); }
+    else errEl.textContent = 'פרטים שגויים';
+    return;
+  }
+  if(act==='submitIdLogin'){
+    const role = el.dataset.role;
+    const idVal = document.getElementById('idInput').value.trim();
+    const pin = document.getElementById('pinInput').value.trim();
+    const errEl = document.getElementById('pinErr');
+    if(!idVal || !pin){ errEl.textContent = 'נא למלא את שני השדות'; return; }
+    if(role==='worker'){
+      const w = DATA.workers.find(w=> w.idNumber && w.idNumber.trim()===idVal && w.pin===pin);
+      if(w){ session.role='worker'; session.workerId=w.id; session.companyId=w.companyId; goto('workerHome'); }
+      else errEl.textContent = 'פרטים שגויים — בדקו ת.ז/טלפון וקוד';
+    } else {
+      const b = DATA.businesses.find(b=> b.companyReg && b.companyReg.trim()===idVal && b.pin===pin);
+      if(b){ session.role='biz'; session.bizId=b.id; session.companyId=b.companyId; goto('bizHome'); }
+      else errEl.textContent = 'פרטים שגויים — בדקו ח.פ וקוד';
+    }
+    return;
+  }
+  if(act==='submitPin'){
+    const role = el.dataset.role;
+    const pin = document.getElementById('pinInput').value.trim();
+    const errEl = document.getElementById('pinErr');
+    if(role==='admin'){
+      if(pin===DATA.adminPin){ session.role='admin'; session.companyId=null; goto('adminHome'); }
+      else errEl.textContent = 'קוד שגוי';
+    } else if(role==='worker'){
+      const w = DATA.workers.find(w=>w.id===session.workerId);
+      if(w && w.pin===pin){ goto('workerHome'); }
+      else errEl.textContent = 'קוד שגוי';
+    } else {
+      const b = DATA.businesses.find(b=>b.id===session.bizId);
+      if(b && b.pin===pin){ goto('bizHome'); }
+      else errEl.textContent = 'קוד שגוי';
+    }
+    return;
+  }
+  if(act==='logout'){ session = {view:'login'}; render(); return; }
+
+  /* ---- admin: companies ---- */
+  if(act==='addCompany'){
+    const name = document.getElementById('newCompanyName').value.trim();
+    if(!name) return showToast('יש להזין שם חברה');
+    DATA.companies.push({id:uid(), name});
+    await saveData(); showToast('החברה נוספה'); render();
+    return;
+  }
+  if(act==='selCompany'){ session.companyId = el.dataset.id; session.month=null; goto('adminHome'); return; }
+  if(act==='delCompany'){
+    if(!confirm('למחוק את החברה וכל הנתונים שלה?')) return;
+    const id = el.dataset.id;
+    DATA.companies = DATA.companies.filter(c=>c.id!==id);
+    DATA.operators = DATA.operators.filter(o=>o.companyId!==id);
+    DATA.workers = DATA.workers.filter(w=>w.companyId!==id);
+    DATA.businesses = DATA.businesses.filter(b=>b.companyId!==id);
+    DATA.entriesWorker = DATA.entriesWorker.filter(e=>e.companyId!==id);
+    DATA.entriesBiz = DATA.entriesBiz.filter(e=>e.companyId!==id);
+    DATA.assignments = DATA.assignments.filter(a=>a.companyId!==id);
+    await saveData(); showToast('נמחק'); render();
+    return;
+  }
+  if(act==='addOperator'){
+    const name = document.getElementById('newOperatorName').value.trim();
+    const pin = document.getElementById('newOperatorPin').value.trim();
+    if(!name || !pin) return showToast('נא למלא שם וקוד');
+    if(DATA.operators.some(o=>o.name.trim()===name)) return showToast('כבר קיים מתפעל בשם הזה, נא לבחור שם אחר');
+    DATA.operators.push({id:uid(), companyId:session.companyId, name, pin});
+    await saveData(); showToast('המתפעל נוסף'); render();
+    return;
+  }
+  if(act==='delOperator'){
+    if(!confirm('למחוק את המתפעל?')) return;
+    DATA.operators = DATA.operators.filter(o=>o.id!==el.dataset.id);
+    await saveData(); render();
+    return;
+  }
+
+  /* ---- admin: workers/businesses ---- */
+  if(act==='addWorker'){
+    const name = document.getElementById('newWorkerName').value.trim();
+    const idNumber = document.getElementById('newWorkerIdNum').value.trim();
+    const rate = Number(document.getElementById('newWorkerRate').value);
+    const pin = document.getElementById('newWorkerPin').value.trim();
+    if(!name || !idNumber || !rate || !pin) return showToast('נא למלא שם, ת.ז/טלפון, תעריף וקוד');
+    if(DATA.workers.some(w=>w.idNumber===idNumber)) return showToast('ת.ז/טלפון זה כבר רשום במערכת');
+    DATA.workers.push({id:uid(), companyId:session.companyId, name, idNumber, rate, pin});
+    await saveData(); showToast('העובד נוסף'); render();
+    return;
+  }
+  if(act==='delWorker'){
+    if(!confirm('למחוק את העובד?')) return;
+    const id = el.dataset.id;
+    DATA.workers = DATA.workers.filter(w=>w.id!==id);
+    DATA.assignments = DATA.assignments.filter(a=>a.workerId!==id);
+    await saveData(); render();
+    return;
+  }
+  if(act==='addBiz'){
+    const name = document.getElementById('newBizName').value.trim();
+    const companyReg = document.getElementById('newBizReg').value.trim();
+    const rate = Number(document.getElementById('newBizRate').value);
+    const pin = document.getElementById('newBizPin').value.trim();
+    if(!name || !companyReg || !rate || !pin) return showToast('נא למלא שם, ח.פ, תעריף וקוד');
+    if(DATA.businesses.some(b=>b.companyReg===companyReg)) return showToast('ח.פ זה כבר רשום במערכת');
+    DATA.businesses.push({id:uid(), companyId:session.companyId, name, companyReg, rate, pin});
+    await saveData(); showToast('העסק נוסף'); render();
+    return;
+  }
+  if(act==='delBiz'){
+    if(!confirm('למחוק את העסק?')) return;
+    const id = el.dataset.id;
+    DATA.businesses = DATA.businesses.filter(b=>b.id!==id);
+    DATA.assignments = DATA.assignments.filter(a=>a.businessId!==id);
+    await saveData(); render();
+    return;
+  }
+
+  /* ---- worker <-> business assignments ---- */
+  if(act==='toggleWorkerAssign'){
+    session.assignPanelWorker = session.assignPanelWorker===el.dataset.id ? null : el.dataset.id;
+    session.assignPanelBiz = null;
+    render();
+    return;
+  }
+  if(act==='toggleBizAssign'){
+    session.assignPanelBiz = session.assignPanelBiz===el.dataset.id ? null : el.dataset.id;
+    session.assignPanelWorker = null;
+    render();
+    return;
+  }
+  if(act==='assignToggle'){
+    const { worker, biz } = el.dataset;
+    toggleAssignment(worker, biz, session.companyId);
+    await saveData(); render();
+    return;
+  }
+
+  /* ---- worker entries ---- */
+  if(act==='addEntryW'){
+    const businessId = document.getElementById('fBiz').value;
+    const date = document.getElementById('fDate').value;
+    const hours = Number(document.getElementById('fHours').value);
+    const note = document.getElementById('fNote').value.trim();
+    if(!businessId || !date || !hours) return showToast('נא למלא עסק, תאריך ושעות');
+    DATA.entriesWorker.push({id:uid(), companyId:session.companyId, workerId:session.workerId, businessId, date, hours, note});
+    await saveData(); showToast('הדיווח נשמר'); render();
+    return;
+  }
+  if(act==='delEntryW'){
+    DATA.entriesWorker = DATA.entriesWorker.filter(e=>e.id!==el.dataset.id);
+    await saveData(); render();
+    return;
+  }
+
+  /* ---- business entries ---- */
+  if(act==='addEntryB'){
+    const workerId = document.getElementById('fWorker').value;
+    const date = document.getElementById('fDate').value;
+    const hours = Number(document.getElementById('fHours').value);
+    const note = document.getElementById('fNote').value.trim();
+    if(!workerId || !date || !hours) return showToast('נא למלא עובד, תאריך ושעות');
+    DATA.entriesBiz.push({id:uid(), companyId:session.companyId, businessId:session.bizId, workerId, date, hours, note});
+    await saveData(); showToast('הדיווח נשמר'); render();
+    return;
+  }
+  if(act==='delEntryB'){
+    DATA.entriesBiz = DATA.entriesBiz.filter(e=>e.id!==el.dataset.id);
+    await saveData(); render();
+    return;
+  }
+
+  /* ---- negotiation threads ---- */
+  if(act==='sendThreadMsg'){
+    const { worker, biz, date, side } = el.dataset;
+    const sid = safeId(worker, biz, date);
+    const input = document.getElementById('msg_'+sid);
+    const text = input.value.trim();
+    if(!text) return showToast('נא לכתוב הערה לפני השליחה');
+    const t = ensureThread(worker, biz, date, session.companyId);
+    t.messages.push({from: side, text, at: Date.now()});
+    if(t.status==='agreed') t.status = 'open';
+    await saveData(); showToast('ההערה נשלחה'); render();
+    return;
+  }
+  if(act==='finalizeThread'){
+    const { worker, biz, date, side } = el.dataset;
+    const sid = safeId(worker, biz, date);
+    const val = document.getElementById('agree_'+sid).value;
+    const hours = Number(val);
+    if(val==='' || isNaN(hours)) return showToast('נא להזין מספר שעות תקין');
+    const t = ensureThread(worker, biz, date, session.companyId);
+    t.status = 'agreed';
+    t.agreedHours = hours;
+    t.messages.push({from: side, text: `סוכם על ${hours} שעות`, at: Date.now()});
+    await saveData(); showToast('סוכם בהצלחה'); render();
+    return;
+  }
+  if(act==='reopenThread'){
+    const { worker, biz, date } = el.dataset;
+    const t = findThread(worker, biz, date);
+    if(t){ t.status = 'open'; await saveData(); render(); }
+    return;
+  }
+
+  /* ---- export ---- */
+  if(act==='saveWebhook'){
+    const url = document.getElementById('sheetsUrl').value.trim();
+    const c = DATA.companies.find(c=>c.id===session.companyId);
+    if(c){ c.sheetsWebhookUrl = url; await saveData(); showToast(url ? 'החיבור נשמר' : 'החיבור הוסר'); render(); }
+    return;
+  }
+  if(act==='pushSheets'){
+    const month = el.dataset.month;
+    const company = DATA.companies.find(c=>c.id===session.companyId);
+    if(!company || !company.sheetsWebhookUrl) return showToast('לא הוגדרה כתובת Webhook לחברה זו');
+    try{
+      await pushReportToSheets(company, month);
+      showToast('הנתונים נשלחו — בדקו בגיליון שהם התעדכנו');
+    }catch(err){
+      showToast('השליחה נכשלה. אפשר להשתמש בהעתקה הידנית במקום.');
+    }
+    return;
+  }
+  if(act==='copySheets'){
+    const month = el.dataset.month;
+    const payload = buildReportPayload(session.companyId, month);
+    let tsv = `דוח חודש ${month} — ${payload.company}\n\n`;
+    tsv += `שכר עובדים\nעובד\tעסק\tשעות\tלתשלום\n`;
+    payload.workerPay.forEach(row=>{ tsv += `${row[0]}\t${row[1]}\t${row[2]}\t${row[3]}\n`; });
+    tsv += `\nחיוב עסקים\nעסק\tעובד\tשעות\tלחיוב\n`;
+    payload.bizBill.forEach(row=>{ tsv += `${row[0]}\t${row[1]}\t${row[2]}\t${row[3]}\n`; });
+    tsv += `\nבדיקת התאמה\nתאריך\tעובד\tעסק\tדיווח עובד\tדיווח עסק\tסטטוס\tשעות מוסכמות\n`;
+    payload.reconciliation.forEach(row=>{ tsv += row.map(v=>v??'').join('\t') + '\n'; });
+    try{
+      await navigator.clipboard.writeText(tsv);
+      showToast('הדוח הועתק! עברו לגוגל שיטס והדביקו (Ctrl+V)');
+    }catch(err){
+      showToast('לא ניתן להעתיק אוטומטית בדפדפן זה');
+    }
+    return;
+  }
+}
+
+/* ========================= INIT ========================= */
+(async function init(){
+  if(getApiUrl()){
+    await loadData();
+  } else {
+    DATA = defaultData(); // placeholder until the admin enters the Web App URL
+  }
+  render();
+})();
+</script>
+</body>
+</html>

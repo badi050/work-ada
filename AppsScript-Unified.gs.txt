@@ -1,0 +1,177 @@
+/**
+ * UNIFIED Apps Script backend for index.html.
+ *
+ * Deploy this entire file as Code.gs (Extensions > Apps Script, replace
+ * everything in there) > Deploy > New deployment > Web app
+ *   - Execute as: Me
+ *   - Who has access: Anyone   <-- required, the app calls this with no login
+ *
+ * Handles both jobs the app needs from one URL:
+ *   1. The main data store - the whole app-state JSON blob (companies,
+ *      operators, workers, businesses, entries, threads, assignments) lives
+ *      in the "AppData" tab. GET (no action, or ?action=load) returns it;
+ *      POST action=save overwrites it. Without this, nothing typed into the
+ *      app (new companies/workers/hours) survives a page refresh.
+ *   2. Per-company monthly report export - POST action=pushReport (or no
+ *      action at all, for the "העתקת דוח" / "סנכרון ידני" buttons) writes
+ *      nicely formatted per-month tables.
+ *
+ * Every time you edit this script you must create a NEW version of the
+ * deployment (Deploy > Manage deployments > pencil icon > New version) - the
+ * /exec URL stays the same but only serves the latest code after that.
+ */
+
+function doGet(e) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var json = readBlob();
+    return ContentService.createTextOutput(json || '{}').setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var action = e && e.parameter && e.parameter.action;
+    if (action === 'save') {
+      writeBlob(e.parameter.payload);
+      return jsonOut({ status: 'ok' });
+    }
+    // action === 'pushReport', or no action at all (older/manual calls)
+    return doPushReport(e);
+  } catch (err) {
+    return jsonOut({ status: 'error', message: err.message });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function jsonOut(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ---------------- main data store (AppData blob) ---------------- */
+
+function getDataSheet() {
+  var sheetName = 'AppData';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) sheet = ss.insertSheet(sheetName);
+  return sheet;
+}
+
+// the JSON blob is split across rows of column A (one chunk per row) so a
+// growing dataset never hits Sheets' per-cell character limit
+function readBlob() {
+  var sheet = getDataSheet();
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 1) return '';
+  var values = sheet.getRange(1, 1, lastRow, 1).getValues();
+  return values.map(function (r) { return r[0]; }).join('');
+}
+
+function writeBlob(text) {
+  var chunkSize = 40000; // stay well under Sheets' ~50,000 char/cell limit
+  var sheet = getDataSheet();
+  sheet.clearContents();
+  var chunks = [];
+  for (var i = 0; i < text.length; i += chunkSize) {
+    chunks.push([text.slice(i, i + chunkSize)]);
+  }
+  if (chunks.length) {
+    sheet.getRange(1, 1, chunks.length, 1).setValues(chunks);
+  }
+}
+
+/* ---------------- monthly report export (formatted tables) ---------------- */
+
+function doPushReport(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  function logError(msg) {
+    var sheet = ss.getSheetByName('שגיאות');
+    if (!sheet) sheet = ss.insertSheet('שגיאות');
+    sheet.appendRow([new Date(), msg]);
+  }
+
+  var raw = null;
+  if (e && e.parameter && e.parameter.payload) {
+    raw = e.parameter.payload;
+  } else if (e && e.postData && e.postData.contents) {
+    raw = e.postData.contents;
+  }
+  if (!raw) {
+    logError('אין נתוני בקשה - כנראה הרצה ידנית מהעורך ולא קריאה אמיתית מהאפליקציה');
+    return jsonOut({ status: 'no data - run manually?' });
+  }
+
+  var data = JSON.parse(raw);
+
+  function writeSheet(sheetName, headers, rows) {
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) sheet = ss.insertSheet(sheetName);
+    sheet.clear();
+
+    sheet.appendRow(headers);
+    var boldRows = [];
+    (rows || []).forEach(function (r, i) {
+      var isBold = false;
+      var rowData = r;
+      if (Array.isArray(r) && typeof r[r.length - 1] === 'boolean') {
+        isBold = r[r.length - 1];
+        rowData = r.slice(0, r.length - 1);
+      }
+      sheet.appendRow(rowData);
+      if (isBold) boldRows.push(i + 2); // +2: שורה 1 היא הכותרת, i מתחיל מ-0
+    });
+
+    var lastRow = sheet.getLastRow();
+    var lastCol = headers.length;
+
+    // גודל פונט וגובה שורה אחיד לכל הטבלה (לא רק לכותרת)
+    sheet.getRange(1, 1, lastRow, lastCol)
+      .setFontSize(15)
+      .setHorizontalAlignment('center')
+      .setVerticalAlignment('middle');
+    sheet.setRowHeights(1, lastRow, 40);
+
+    // כותרת: מודגשת, צבועה, טקסט לבן
+    sheet.getRange(1, 1, 1, lastCol)
+      .setFontWeight('bold').setFontSize(15)
+      .setBackground('#4a6fa5').setFontColor('#ffffff');
+    sheet.setFrozenRows(1);
+    sheet.setRowHeight(1, 44);
+
+    // גבולות לכל הטבלה
+    if (lastRow >= 1) {
+      sheet.getRange(1, 1, lastRow, lastCol).setBorder(true, true, true, true, true, true);
+    }
+
+    // הדגשת שורות סה"כ
+    boldRows.forEach(function (rowNum) {
+      sheet.getRange(rowNum, 1, 1, lastCol).setFontWeight('bold').setBackground('#eaf0fb');
+    });
+
+    sheet.autoResizeColumns(1, lastCol);
+    for (var c = 1; c <= lastCol; c++) {
+      var w = sheet.getColumnWidth(c) + 600;
+      sheet.setColumnWidth(c, Math.round(w / 2));
+    }
+  }
+
+  try {
+    writeSheet('שכר עובדים - ' + data.month, ['עובד', 'עסק', 'שעות', 'לתשלום'], data.workerPay);
+    writeSheet('חיוב עסקים - ' + data.month, ['עסק', 'עובד', 'שעות', 'לחיוב'], data.bizBill);
+    writeSheet('התאמות - ' + data.month, ['תאריך', 'עובד', 'עסק', 'דיווח עובד', 'דיווח עסק', 'סטטוס', 'שעות מוסכמות'], data.reconciliation);
+
+    logError('הצלחה: התקבל ועודכן דוח לחודש ' + data.month);
+    return jsonOut({ status: 'ok' });
+  } catch (err) {
+    logError('שגיאה: ' + err.message + ' | ' + err.stack);
+    return jsonOut({ status: 'error', message: err.message });
+  }
+}
