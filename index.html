@@ -172,11 +172,14 @@ const defaultData = () => ({
 let DATA = null;
 
 /* ---- primary data backend: a Google Apps Script Web App backed by a Sheet ----
-   replaces window.storage entirely. The Web App URL is entered once by the admin
-   (see viewApiSetup) and kept in localStorage, since it must exist before any
-   data can be loaded from it. Deploy AppsScript-DataStore.gs.txt to get this URL. */
+   replaces window.storage entirely. DEFAULT_API_URL ships baked into the app so
+   workers/businesses never have to configure anything themselves; the "⚙ הגדרות
+   חיבור נתונים" screen is only for an admin who needs to point at a different
+   deployment (localStorage overrides the default when set). Deploy
+   AppsScript-Unified.gs.txt to get this URL. */
+const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbyusy2n_TqtsUnTmnjefGNfPRnEL-ojqGwwIwtmSGfSa1Y0Oy45S1xQKPrTx_t8CYJZMw/exec';
 const API_URL_KEY = 'sheetsDataApiUrl_v1';
-function getApiUrl(){ return localStorage.getItem(API_URL_KEY) || ''; }
+function getApiUrl(){ return localStorage.getItem(API_URL_KEY) || DEFAULT_API_URL; }
 function setApiUrl(url){ localStorage.setItem(API_URL_KEY, url); }
 
 async function loadData(){
@@ -201,9 +204,11 @@ async function saveData(){
     const json = await res.json();
     if(!json || json.status!=='ok') throw new Error(json && json.message || 'save failed');
     maybeAutoPush(); // לא ממתינים לזה, רץ ברקע ולא חוסם את המסך - דוח החברה הנפרד (אם הוגדר)
+    return true;
   }catch(e){
     console.error('שגיאת שמירה לגוגל שיטס', e);
     showToast('שגיאה בשמירת הנתונים לגוגל שיטס - בדקו את החיבור');
+    return false;
   }
 }
 
@@ -868,8 +873,7 @@ async function saveBulkRows(workerId){
       DATA.entriesBiz.splice(idx,1);
     }
   });
-  await saveData();
-  showToast('כל שעות החודש נשמרו');
+  if(await saveData()) showToast('כל שעות החודש נשמרו');
   render();
 }
 
@@ -957,7 +961,7 @@ async function onAction(e){
     const name = document.getElementById('newCompanyName').value.trim();
     if(!name) return showToast('יש להזין שם חברה');
     DATA.companies.push({id:uid(), name});
-    await saveData(); showToast('החברה נוספה'); render();
+    if(await saveData()) showToast('החברה נוספה'); render();
     return;
   }
   if(act==='selCompany'){ session.companyId = el.dataset.id; session.month=null; goto('adminHome'); return; }
@@ -971,7 +975,7 @@ async function onAction(e){
     DATA.entriesWorker = DATA.entriesWorker.filter(e=>e.companyId!==id);
     DATA.entriesBiz = DATA.entriesBiz.filter(e=>e.companyId!==id);
     DATA.assignments = DATA.assignments.filter(a=>a.companyId!==id);
-    await saveData(); showToast('נמחק'); render();
+    if(await saveData()) showToast('נמחק'); render();
     return;
   }
   if(act==='addOperator'){
@@ -980,7 +984,7 @@ async function onAction(e){
     if(!name || !pin) return showToast('נא למלא שם וקוד');
     if(DATA.operators.some(o=>o.name.trim()===name)) return showToast('כבר קיים מתפעל בשם הזה, נא לבחור שם אחר');
     DATA.operators.push({id:uid(), companyId:session.companyId, name, pin});
-    await saveData(); showToast('המתפעל נוסף'); render();
+    if(await saveData()) showToast('המתפעל נוסף'); render();
     return;
   }
   if(act==='delOperator'){
@@ -999,7 +1003,7 @@ async function onAction(e){
     if(!name || !idNumber || !rate || !pin) return showToast('נא למלא שם, ת.ז/טלפון, תעריף וקוד');
     if(DATA.workers.some(w=>w.idNumber===idNumber)) return showToast('ת.ז/טלפון זה כבר רשום במערכת');
     DATA.workers.push({id:uid(), companyId:session.companyId, name, idNumber, rate, pin});
-    await saveData(); showToast('העובד נוסף'); render();
+    if(await saveData()) showToast('העובד נוסף'); render();
     return;
   }
   if(act==='delWorker'){
@@ -1018,7 +1022,7 @@ async function onAction(e){
     if(!name || !companyReg || !rate || !pin) return showToast('נא למלא שם, ח.פ, תעריף וקוד');
     if(DATA.businesses.some(b=>b.companyReg===companyReg)) return showToast('ח.פ זה כבר רשום במערכת');
     DATA.businesses.push({id:uid(), companyId:session.companyId, name, companyReg, rate, pin});
-    await saveData(); showToast('העסק נוסף'); render();
+    if(await saveData()) showToast('העסק נוסף'); render();
     return;
   }
   if(act==='delBiz'){
@@ -1058,7 +1062,7 @@ async function onAction(e){
     const note = document.getElementById('fNote').value.trim();
     if(!businessId || !date || !hours) return showToast('נא למלא עסק, תאריך ושעות');
     DATA.entriesWorker.push({id:uid(), companyId:session.companyId, workerId:session.workerId, businessId, date, hours, note});
-    await saveData(); showToast('הדיווח נשמר'); render();
+    if(await saveData()) showToast('הדיווח נשמר'); render();
     return;
   }
   if(act==='delEntryW'){
@@ -1075,7 +1079,7 @@ async function onAction(e){
     const note = document.getElementById('fNote').value.trim();
     if(!workerId || !date || !hours) return showToast('נא למלא עובד, תאריך ושעות');
     DATA.entriesBiz.push({id:uid(), companyId:session.companyId, businessId:session.bizId, workerId, date, hours, note});
-    await saveData(); showToast('הדיווח נשמר'); render();
+    if(await saveData()) showToast('הדיווח נשמר'); render();
     return;
   }
   if(act==='delEntryB'){
@@ -1094,7 +1098,7 @@ async function onAction(e){
     const t = ensureThread(worker, biz, date, session.companyId);
     t.messages.push({from: side, text, at: Date.now()});
     if(t.status==='agreed') t.status = 'open';
-    await saveData(); showToast('ההערה נשלחה'); render();
+    if(await saveData()) showToast('ההערה נשלחה'); render();
     return;
   }
   if(act==='finalizeThread'){
@@ -1107,7 +1111,7 @@ async function onAction(e){
     t.status = 'agreed';
     t.agreedHours = hours;
     t.messages.push({from: side, text: `סוכם על ${hours} שעות`, at: Date.now()});
-    await saveData(); showToast('סוכם בהצלחה'); render();
+    if(await saveData()) showToast('סוכם בהצלחה'); render();
     return;
   }
   if(act==='reopenThread'){
@@ -1121,7 +1125,7 @@ async function onAction(e){
   if(act==='saveWebhook'){
     const url = document.getElementById('sheetsUrl').value.trim();
     const c = DATA.companies.find(c=>c.id===session.companyId);
-    if(c){ c.sheetsWebhookUrl = url; await saveData(); showToast(url ? 'החיבור נשמר' : 'החיבור הוסר'); render(); }
+    if(c){ c.sheetsWebhookUrl = url; if(await saveData()) showToast(url ? 'החיבור נשמר' : 'החיבור הוסר'); render(); }
     return;
   }
   if(act==='pushSheets'){
